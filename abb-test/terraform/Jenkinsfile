@@ -1,48 +1,49 @@
 pipeline {
     agent any
     
-        environment {
+    environment {
             
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_ACCESS_KEY_ID = credentials('AWS Credentials')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS Credentials')
     }
 
     stages {
         stage('Checkout') {
             steps {
-
                 git branch: 'main', url: 'https://github.com/ChristianAdan/abb-test.git'
             }
         }
-
+        
         stage('Terraform Init') {
             steps {
-                dir('terraform') {
-                    sh 'terraform init'
+                dir('abb-test/terraform') {
+                    bat 'terraform init -backend=false'
                 }
             }
         }
         
         stage('Terraform Plan') {
             steps {
-                sh 'terraform plan -out tfplan'
-                sh 'terraform show -no-color tfplan > tfplan.txt'
+                dir('abb-test/terraform') {
+                    bat 'terraform plan -out tfplan'
+                    bat 'terraform show -no-color tfplan > tfplan.txt'
+                }
             }
         }
-
+        
         stage('Terraform Apply / Destroy') {
             steps {
                 script {
                     if (params.action == 'apply') {
                         if (!params.autoApprove) {
-                            def plan = readFile 'tfplan.txt'
+                            def plan = readFile 'abb-test/terraform/tfplan.txt'
                             input message: "Do you want to apply the plan?",
-                            parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+                                  parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
                         }
 
-                        sh 'terraform ${action} -input=false tfplan'
+                        bat "terraform apply -input=false abb-test/terraform/tfplan"
                     } else if (params.action == 'destroy') {
-                        sh 'terraform ${action} --auto-approve'
+                        bat "terraform destroy --auto-approve"
                     } else {
                         error "Invalid action selected. Please choose either 'apply' or 'destroy'."
                     }
