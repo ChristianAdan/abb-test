@@ -4,7 +4,10 @@ pipeline {
     stage('Build') {
       steps {
         echo "Display test.txt"
-        
+        bash '''
+            #!/bin/bash
+            cat test.txt
+         ''' 
       }
     }
   }
